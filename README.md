@@ -292,3 +292,58 @@ form을 submit -> POST 데이터 전송 -> choice=# 전달
 - request.POST : 키로 전송된 자료에 접근할 수 있도록 해주는 사전과 같은 객체 (항상 문자열 값)
 - request.POST['choice'] : 선택된 설문의 ID를 문자열로 반환
 - 
+
+### reverse() 함수
+reverse(viewname, urlconf=None, args=None, kwargs=None, current_app=None)
+```python
+from news import views
+
+path('archive/', views.archive, name='news-archive')
+```
+↓
+```python
+# using the named URL
+reverse('news-archive')
+
+# passing a callable object
+# (This is discouraged because you can't reverse namespaced views this way.)
+from news import views
+reverse(views.archive)
+```
+↓
+```python
+from django.urls import reverse
+
+def myview(request):
+    return HttpResponseRedirect(reverse('arch-summary', args=[1945]))
+```
+
+```python
+>>> reverse('admin:app_list', kwargs={'app_label': 'auth'})
+'/admin/auth/'
+```
+
+### generic view 사용
+#### 여태껏 사용했던 뷰의 변화
+1. HttpResponse를 이용한 함수형 뷰  
+    - 함수형뷰를 사용해 template을 읽어 HttpResponse로 응답  
+    - 번거롭고 복잡, 가장 기초적인 부분
+2. render를 이용한 함수형 뷰
+    - index뷰를 shortcuts.render를 사용하여 보다 간결하게 표현
+    - template = … 를 없앰
+    - HttpResponse로 리턴하던 것이 render함수로 대체
+    - render함수의 패키지 이름이 왜 shortcuts인지 의문이 풀림
+3. 제네릭 뷰 시스템(Generic views system)
+    - 위의 반복되는 공통 부분을 패턴화하여 사용하기 쉽게 추상화
+    - 최소한 그 뷰가 어떤 모델을 사용할 것인지만 지정하면, 나머진 모두 상위 클래스(List generic view, DetailView 등)가 모든 걸 알아서 해준다.
+    - 필요에 따라 각 뷰마다 달라지는 값을 넣어주기만 하면 됨 -> 상속을 사용할 수 있는 클래스 뷰를 사용하는 힘(이유)
+
+#### ListView와 DetailView
+1. DetailView : "특정 개체 유형에 대한 세부 정보 페이지 표시"
+    - URL에서 캡쳐 된 기본 키 값이 "pk" 라고 기대. 따라서 question_id를 제너릭 뷰를 위해 pk로 변경
+    - 기본적으로 DetailView 제너릭 뷰는 <app name>/<model name>_detail.html 템플릿을 사용
+    - template_name 속성을 이용해 특정 템플릿 이름을 사용하도록 알려줄 수 있음
+    
+2. ListView : "개체 목록 표시"
+    - ListView 제네릭 뷰는 <app name>/<model name>_list.html 템플릿을 기본으로 사용
+    - template_name 속성을 이용
