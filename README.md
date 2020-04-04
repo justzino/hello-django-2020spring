@@ -281,3 +281,14 @@ app_name = 'polls'
 
 ---
 ---
+
+## 첫 번째 장고 앱 작성하기, part 4
+
+### form 요소
+```html
+<input type="radio" name="choice" id="choice{{ forloop.counter }}" value="{{ choice.id }}">
+```
+form을 submit -> POST 데이터 전송 -> choice=# 전달  
+- request.POST : 키로 전송된 자료에 접근할 수 있도록 해주는 사전과 같은 객체 (항상 문자열 값)
+- request.POST['choice'] : 선택된 설문의 ID를 문자열로 반환
+- 
