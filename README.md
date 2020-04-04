@@ -48,8 +48,9 @@ path(route, view, kwargs=None, name=None)
 - name
     - URL에 이름을 부여 -> Django 어디서나 명확히 참조
 
----
----
+---  
+---  
+
 
 ## 첫 번째 장고 앱 작성하기, part 2
 ## 사용 명령어
@@ -77,7 +78,7 @@ INSTALLED_APPS = [
 ### 2. Django 모델 API
 #### 1. **INSERT**  
 데이타를 삽입하기 위해서는 먼저 테이블에 해당하는 모델(Model Class)로부터 객체를 생성하고, 그 객체의 save() 메서드를 호출하면 된다.
-save() 메서드가 호출되면, SQL의 INSERT이 생성되고 실행되어 테이블에 데이타가 추가된다.
+**save()** 메서드가 호출되면, SQL의 INSERT이 생성되고 실행되어 테이블에 데이타가 추가된다.
 
 #### 2. **SELECT**  
 Django는 디폴트로 모델 틀래스에 대해 "objects"라는 Manager(django.db.models.Manager) 객체를 자동으로 추가한다.   
@@ -191,3 +192,92 @@ from .models import Question
 
 admin.site.register(Question)
 ```
+
+---  
+---  
+
+## 첫 번째 장고 앱 작성하기, part 3
+
+### View 만들기 - 만들 페이지
+우리가 만드는 poll 어플리케이션에서 다음과 같은 네개의 view 를 만들어 본다.
+1. 질문 "색인" 페이지 -- 최근의 질문들을 표시합니다.
+2. 질문 "세부" 페이지 -- 질문 내용과, 투표할 수 있는 서식을 표시합니다.
+3. 질문 "결과" 페이지 -- 특정 질문에 대한 결과를 표시합니다
+4. 투표 기능 -- 특정 질문에 대해 특정 선택을 할 수 있는 투표 기능을 제공합니다.
+
+#### view
+- polls/views.py 에 뷰를 추가 -> polls.urls 연결
+- 참고 사항  
+    - \<int:question_id>에서 괄호를 사용하여 URL 의 일부를 "캡처"하고, 해당 내용을 keyword 인수로서 뷰 함수로 전달  
+    - :question_id> 부분: 일치되는 패턴을 구별하기 위해 정의한 이름  
+    - <int: 부분: 어느 패턴이 해당 URL 경로에 일치되어야 하는 지를 결정하는 컨버터  
+- Django에서 각 뷰에 필요한 것은 HttpResponse 객체 혹은 예외
+
+#### 템플릿 네임스페이싱
+템플릿을 polls/templates 이 아닌 polls/templates/polls/index.html 에 넣는 이유
+-> Django 는 name이 match되는 첫번째 template를 선택하는데, 만약 다른 application에 동일한 이름의 template이 있으면 두 templates의 구별이 불가능 할 수 있다.
+따라서, application 이름의 다른 directory안으로 namespacing 함으로 확실히 구별해 두는 것이 좋다.
+
+#### 지름길 : render()
+템플릿에 context 를 채워넣어 표현한 결과를 HttpResponse 객체와 함께 돌려주는 구문은 자주 쓰인다.
+polls/views.py
+```python
+from django.http import HttpResponse
+from django.template import loader
+from .models import Question
+def index(request):
+    latest_question_list = Question.objects.order_by('-pub_date')[:5]
+    template = loader.get_template('polls/index.html')
+    context = {
+        'latest_question_list': latest_question_list,
+    }
+    return HttpResponse(template.render(context, request))  #template을 불러온 후 context를 전달
+```
+↓ 단축 기능(shortcuts) 사용
+```python
+from django.shortcuts import render
+def index(request):
+    return render(request, 'polls/index.html', context) 
+```
+
+#### 지름길 : get_object_or_404()
+```python
+from django.http import Http404
+from django.shortcuts import render
+
+from .models import Question
+# ...
+def detail(request, question_id):
+    try:
+        question = Question.objects.get(pk=question_id)
+    except Question.DoesNotExist:
+        raise Http404("Question does not exist")
+    return render(request, 'polls/detail.html', {'question': question})
+```
+↓ 단축 기능(shortcuts) 사용
+```python
+from django.shortcuts import get_object_or_404, render
+
+from .models import Question
+# ...
+def detail(request, question_id):
+    question = get_object_or_404(Question, pk=question_id)
+    return render(request, 'polls/detail.html', {'question': question})
+```
+객체가 존재 하지 않으면 Http404 예외 발생,  get_list_or_404()도 비슷한 동작
+
+#### 템플릿 시스템
+
+1. 하드코딩하지 않기
+    - 하드코딩된 접근 방식의 문제 : 많은 템플릿을 가진 프로젝트들의 URL을 바꾸는 게 어려운 일이 됨
+    - {% url %} template 태그를 사용하여 url 설정에 정의된 특정한 URL 경로들의 의존성을 제거할 수 있음
+
+2. URL의 이름공간 정하기
+    - Django가 {% url %} 템플릿태그를 사용할 때, 어떤 앱의 뷰에서 URL을 생성했는지 알 수 있도록!
+    - URLconf에 이름공간(namespace)을 추가 
+```python 
+app_name = 'polls'
+```
+
+---
+---
